@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go get:*)",
+      "Read(//Users/benol/go/pkg/mod/github.com/**)",
+      "Read(//Users/benol/go/pkg/mod/**)",
+      "Bash(go build:*)",
+      "Bash(LBUG_DIR=\"/Users/benol/Library/Application Support/go/pkg/mod/github.com/!ladybug!d!b/go-ladybug@v0.13.1\")",
+      "Bash(mkdir -p \"$LBUG_DIR/lib/dynamic/darwin\")",
+      "Bash(curl -L -o /tmp/liblbug-osx.tar.gz \"https://github.com/LadybugDB/ladybug/releases/latest/download/liblbug-osx-universal.tar.gz\")",
+      "Bash(echo \"Downloaded: $?\")",
+      "Read(//tmp/**)",
+      "Read(//private/tmp/**)",
+      "Bash(tar -xzf liblbug-osx.tar.gz)",
+      "Bash(go vet:*)",
+      "Bash(go test:*)",
+      "Bash(./quiver:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}
