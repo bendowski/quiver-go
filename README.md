@@ -89,12 +89,32 @@ This makes Cypher queries useful for code indexing tasks like:
 - locating embedded struct relationships
 - searching declarations by path/line metadata
 
+## Build
+
+Quiver depends on [go-ladybug](https://github.com/LadybugDB/go-ladybug), which wraps a native LadyBugDB library via cgo. This repo uses go-ladybug's "Option 2" setup (see its [README](https://github.com/LadybugDB/go-ladybug#option-2-add-the-compiled-libraries-to-your-project)): the native shared library is downloaded on demand into `cmd/quiver/lib-ladybug/` (gitignored) instead of being vendored into the module cache.
+
+1.  Download the native library (one-time, or after bumping the go-ladybug version):
+
+    ```bash
+    go generate -tags system_ladybug ./cmd/quiver/...
+    ```
+
+    **Known quirk:** the upstream generate script can produce a circular symlink (`liblbug.dylib` ↔ `liblbug.0.dylib` on macOS) instead of pointing at the real versioned file it just downloaded (e.g. `liblbug.0.18.2.dylib`). If the build below fails with `library 'lbug' not found`, check `cmd/quiver/lib-ladybug/` and fix the symlinks:
+
+    ```bash
+    ln -sf liblbug.<version>.dylib cmd/quiver/lib-ladybug/liblbug.dylib
+    ln -sf liblbug.<version>.dylib cmd/quiver/lib-ladybug/liblbug.0.dylib
+    ```
+
+2.  Build with the `system_ladybug` tag:
+
+    ```bash
+    go build -tags system_ladybug -o quiver ./cmd/quiver
+    ```
+
 ## Quick Start
 
 ```bash
-# build
-go build -o quiver ./cmd/quiver
-
 # load Go files from a directory into a persistent DB
 ./quiver --db /tmp/quiver.db load ./goparse
 
@@ -118,8 +138,19 @@ go build -o quiver ./cmd/quiver
 
 ## Development
 
-Run tests:
+Run tests (other packages besides `cmd/quiver` import go-ladybug directly and build their own test binaries, so `CGO_CFLAGS`/`CGO_LDFLAGS` need to be set explicitly rather than relying on the cgo pragma in `cmd/quiver/ladybug_lib.go`):
 
 ```bash
-go test ./...
+CGO_CFLAGS="-I$(pwd)/cmd/quiver/lib-ladybug" \
+CGO_LDFLAGS="-L$(pwd)/cmd/quiver/lib-ladybug -Wl,-rpath,$(pwd)/cmd/quiver/lib-ladybug" \
+go test -tags system_ladybug ./...
 ```
+
+## Upgrading Dependencies
+
+```bash
+go get -u ./...
+go mod tidy
+```
+
+If this bumps `github.com/LadybugDB/go-ladybug`, re-run the native library download (`go generate -tags system_ladybug ./cmd/quiver/...`, see [Build](#build)) and re-verify the build/tests, since go-ladybug has changed its native-loading strategy across major-ish versions before (e.g. the v0.13.1 → v0.17.0 jump moved from a module-cache-vendored dylib to the `system_ladybug` tag setup described above).
