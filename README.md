@@ -5,7 +5,7 @@ Quiver turns Go source code into a property graph stored in [LadyBugDB](https://
 ## What It Does
 
 - Parses `.go` files and extracts code structure into graph nodes and edges.
-- Stores that graph in LadyBugDB (in-memory by default, or on disk with `--db`).
+- Stores that graph on disk in LadyBugDB (directory given by the required `--db` flag).
 - Executes raw Cypher queries against the stored graph.
 - Dumps source files back to disk from stored `File.source` content, with a fallback reconstruction path.
 
@@ -19,7 +19,7 @@ The CLI entrypoint is `cmd/quiver` and exposes three commands:
 
 Global flag:
 
-- `--db <path>`: LadyBug database directory. If omitted, Quiver uses an in-memory DB for that process run.
+- `--db <path>` (required): LadyBug database directory. Each command runs as its own process, so the graph must be persisted to disk for `load` output to be visible to a later `query` or `dump`.
 
 ### `load`
 

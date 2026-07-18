@@ -19,7 +19,8 @@ you query or reconstruct it via Cypher.`,
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&dbPath, "db", "", "path to LadyBug database directory (empty = in-memory)")
+	rootCmd.PersistentFlags().StringVar(&dbPath, "db", "", "path to LadyBug database directory")
+	_ = rootCmd.MarkPersistentFlagRequired("db")
 	rootCmd.AddCommand(loadCmd, queryCmd, dumpCmd)
 }
 
