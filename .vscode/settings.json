@@ -1,0 +1,9 @@
+{
+  "gopls": {
+    "buildFlags": ["-tags=system_ladybug"]
+  },
+  "go.toolsEnvVars": {
+    "CGO_CFLAGS": "-I${workspaceFolder}/cmd/quiver/lib-ladybug",
+    "CGO_LDFLAGS": "-L${workspaceFolder}/cmd/quiver/lib-ladybug -Wl,-rpath,${workspaceFolder}/cmd/quiver/lib-ladybug"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "quiver: load",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/quiver",
+      "buildFlags": "-tags=system_ladybug",
+      "env": {
+        "CGO_CFLAGS": "-I${workspaceFolder}/cmd/quiver/lib-ladybug",
+        "CGO_LDFLAGS": "-L${workspaceFolder}/cmd/quiver/lib-ladybug -Wl,-rpath,${workspaceFolder}/cmd/quiver/lib-ladybug"
+      },
+      "args": ["--db", "/tmp/qdb", "load", "./goparse"],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "quiver: query",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/quiver",
+      "buildFlags": "-tags=system_ladybug",
+      "env": {
+        "CGO_CFLAGS": "-I${workspaceFolder}/cmd/quiver/lib-ladybug",
+        "CGO_LDFLAGS": "-L${workspaceFolder}/cmd/quiver/lib-ladybug -Wl,-rpath,${workspaceFolder}/cmd/quiver/lib-ladybug"
+      },
+      "args": ["--db", "/tmp/qdb", "query", "MATCH (f:Function) RETURN f.name, f.exported"],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "quiver: dump",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/cmd/quiver",
+      "buildFlags": "-tags=system_ladybug",
+      "env": {
+        "CGO_CFLAGS": "-I${workspaceFolder}/cmd/quiver/lib-ladybug",
+        "CGO_LDFLAGS": "-L${workspaceFolder}/cmd/quiver/lib-ladybug -Wl,-rpath,${workspaceFolder}/cmd/quiver/lib-ladybug"
+      },
+      "args": ["--db", "/tmp/qdb", "dump", "/tmp/out"],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}
