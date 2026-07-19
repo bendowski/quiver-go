@@ -4,14 +4,14 @@ import (
 	"context"
 	"testing"
 
-	"github.com/bendowski/quiver/internal/testutil"
+	"github.com/bendowski/quiver/internal/dbtest"
 	"github.com/bendowski/quiver/model"
 	"github.com/bendowski/quiver/query/cypher"
 	"github.com/google/uuid"
 )
 
 func TestCypherQuerier_Query(t *testing.T) {
-	s := testutil.NewMemStore(t)
+	s := dbtest.NewMemStore(t)
 	ctx := context.Background()
 
 	// Seed one Package node directly via the Store.
@@ -42,7 +42,7 @@ func TestCypherQuerier_Query(t *testing.T) {
 }
 
 func TestCypherQuerier_QueryWithParams(t *testing.T) {
-	s := testutil.NewMemStore(t)
+	s := dbtest.NewMemStore(t)
 	ctx := context.Background()
 
 	pkgID := uuid.NewString()

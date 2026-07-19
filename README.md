@@ -158,6 +158,14 @@ CGO_LDFLAGS="-L$(pwd)/cmd/quiver/lib-ladybug -Wl,-rpath,$(pwd)/cmd/quiver/lib-la
 go test -tags system_ladybug ./...
 ```
 
+Packages that don't touch LadyBug can be tested without the native library
+(their tests use the in-memory `testutil.FakeStore` instead of a real
+database):
+
+```bash
+go test ./goparse ./dump
+```
+
 ### Debugging in VS Code
 
 `.vscode/launch.json` has debug configurations for `load`, `query`, and `dump` (Go extension required). Each sets the `system_ladybug` build tag and the `CGO_CFLAGS`/`CGO_LDFLAGS` env vars needed to find `cmd/quiver/lib-ladybug/`. Pick a configuration, adjust its `args`, and press F5.

@@ -20,7 +20,7 @@ func Hello() string {
 `
 
 func TestDumpAll_roundTrip(t *testing.T) {
-	s := testutil.NewMemStore(t)
+	s := testutil.NewFakeStore()
 	ctx := context.Background()
 
 	// Parse into in-memory store.
@@ -70,7 +70,7 @@ func TestDumpAll_roundTrip(t *testing.T) {
 }
 
 func TestDumpAll_emptyStore(t *testing.T) {
-	s := testutil.NewMemStore(t)
+	s := testutil.NewFakeStore()
 	ctx := context.Background()
 	outfs := testutil.NewMemFs()
 	d := dump.New(s, outfs)
@@ -81,7 +81,7 @@ func TestDumpAll_emptyStore(t *testing.T) {
 
 func TestDumpAll_reconstructFallback(t *testing.T) {
 	// Create a File node with no "source" to force reconstruction path.
-	s := testutil.NewMemStore(t)
+	s := testutil.NewFakeStore()
 	ctx := context.Background()
 
 	pkgID := uuid.NewString()

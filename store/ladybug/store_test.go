@@ -6,12 +6,12 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/bendowski/quiver/internal/testutil"
+	"github.com/bendowski/quiver/internal/dbtest"
 	"github.com/bendowski/quiver/model"
 )
 
 func TestAddNodeAndGetByKind(t *testing.T) {
-	s := testutil.NewMemStore(t)
+	s := dbtest.NewMemStore(t)
 	ctx := context.Background()
 
 	node := model.Node{
@@ -44,7 +44,7 @@ func TestAddNodeAndGetByKind(t *testing.T) {
 }
 
 func TestAddEdgeAndGetEdgesFrom(t *testing.T) {
-	s := testutil.NewMemStore(t)
+	s := dbtest.NewMemStore(t)
 	ctx := context.Background()
 
 	pkgID := uuid.NewString()
@@ -107,7 +107,7 @@ func TestAddEdgeAndGetEdgesFrom(t *testing.T) {
 }
 
 func TestFindNodeByProperty(t *testing.T) {
-	s := testutil.NewMemStore(t)
+	s := dbtest.NewMemStore(t)
 	ctx := context.Background()
 
 	n := model.Node{
@@ -142,7 +142,7 @@ func TestFindNodeByProperty(t *testing.T) {
 }
 
 func TestClear(t *testing.T) {
-	s := testutil.NewMemStore(t)
+	s := dbtest.NewMemStore(t)
 	ctx := context.Background()
 
 	n := model.Node{
