@@ -1,42 +1,51 @@
 package schema_test
 
 import (
+	"errors"
+	"strings"
 	"testing"
 
-	lbug "github.com/LadybugDB/go-ladybug"
 	"github.com/bendowski/quiver/schema"
 )
 
-func TestInitSchema(t *testing.T) {
-	db, err := lbug.OpenInMemoryDatabase(lbug.DefaultSystemConfig())
-	if err != nil {
-		t.Fatalf("open in-memory db: %v", err)
-	}
-	defer db.Close()
+// These tests exercise InitSchema against a fake ExecFunc so they need no
+// database. Execution of the DDL against a real LadyBug instance is covered
+// by the store/ladybug tests, whose Open("") calls InitSchema on every run.
 
-	conn, err := lbug.OpenConnection(db)
-	if err != nil {
-		t.Fatalf("open connection: %v", err)
-	}
-	defer conn.Close()
-
-	execFn := func(stmt string) error {
-		r, err := conn.Query(stmt)
-		if err != nil {
-			return err
-		}
-		r.Close()
+func TestInitSchema_allStatementsExecuted(t *testing.T) {
+	var stmts []string
+	err := schema.InitSchema(func(stmt string) error {
+		stmts = append(stmts, stmt)
 		return nil
-	}
-
-	if err := schema.InitSchema(execFn); err != nil {
+	})
+	if err != nil {
 		t.Fatalf("InitSchema: %v", err)
 	}
-
-	// Verify at least one known node table exists by querying it.
-	r, err := conn.Query("MATCH (n:Package) RETURN n")
-	if err != nil {
-		t.Fatalf("query Package after schema init: %v", err)
+	if len(stmts) != 15 { // 7 node tables + 8 rel tables
+		t.Fatalf("want 15 statements, got %d", len(stmts))
 	}
-	r.Close()
+	// Node tables must come before rel tables (rel DDL references node tables).
+	if !strings.HasPrefix(stmts[0], "CREATE NODE TABLE") {
+		t.Errorf("first stmt is not a node table: %s", stmts[0])
+	}
+	if !strings.HasPrefix(stmts[14], "CREATE REL TABLE") {
+		t.Errorf("last stmt is not a rel table: %s", stmts[14])
+	}
+}
+
+func TestInitSchema_alreadyExistsIsIgnored(t *testing.T) {
+	err := schema.InitSchema(func(stmt string) error {
+		return errors.New(`Binder exception: Foo already exists in catalog.`)
+	})
+	if err != nil {
+		t.Fatalf("already-exists errors should be skipped, got: %v", err)
+	}
+}
+
+func TestInitSchema_otherErrorsPropagate(t *testing.T) {
+	boom := errors.New("disk exploded")
+	err := schema.InitSchema(func(stmt string) error { return boom })
+	if !errors.Is(err, boom) {
+		t.Fatalf("want propagated error, got: %v", err)
+	}
 }

@@ -1,4 +1,4 @@
-package cypher
+package ladybug
 
 import (
 	"context"
@@ -8,19 +8,20 @@ import (
 	"github.com/bendowski/quiver/query"
 )
 
-// CypherQuerier executes raw Cypher queries against a LadyBug connection and
+// querier executes raw Cypher queries against a LadyBug connection and
 // returns structured query.Result values.
-type CypherQuerier struct {
+type querier struct {
 	conn *lbug.Connection
 }
 
-// New creates a new CypherQuerier using the provided connection.
-func New(conn *lbug.Connection) *CypherQuerier {
-	return &CypherQuerier{conn: conn}
-}
+var _ query.Querier = (*querier)(nil)
+
+// Querier returns a query.Querier that executes raw Cypher against this
+// store's connection.
+func (s *Store) Querier() query.Querier { return &querier{conn: s.conn} }
 
 // Query executes a Cypher string with no parameters.
-func (q *CypherQuerier) Query(_ context.Context, cypher string) (*query.Result, error) {
+func (q *querier) Query(_ context.Context, cypher string) (*query.Result, error) {
 	qr, err := q.conn.Query(cypher)
 	if err != nil {
 		return nil, fmt.Errorf("query: %w", err)
@@ -30,7 +31,7 @@ func (q *CypherQuerier) Query(_ context.Context, cypher string) (*query.Result, 
 }
 
 // QueryWithParams executes a Cypher string with named parameters.
-func (q *CypherQuerier) QueryWithParams(_ context.Context, cypher string, params map[string]any) (*query.Result, error) {
+func (q *querier) QueryWithParams(_ context.Context, cypher string, params map[string]any) (*query.Result, error) {
 	ps, err := q.conn.Prepare(cypher)
 	if err != nil {
 		return nil, fmt.Errorf("prepare: %w", err)

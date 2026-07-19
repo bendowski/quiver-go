@@ -1,5 +1,6 @@
-// Package cypher provides Cypher query string helpers and a CypherQuerier
-// implementation backed by a LadyBug connection.
+// Package cypher builds parameterised Cypher statements for the quiver
+// property graph. Statement execution lives in store/ladybug, which keeps
+// this package free of cgo.
 package cypher
 
 import (

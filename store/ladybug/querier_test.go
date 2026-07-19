@@ -1,4 +1,4 @@
-package cypher_test
+package ladybug_test
 
 import (
 	"context"
@@ -6,11 +6,10 @@ import (
 
 	"github.com/bendowski/quiver/internal/dbtest"
 	"github.com/bendowski/quiver/model"
-	"github.com/bendowski/quiver/query/cypher"
 	"github.com/google/uuid"
 )
 
-func TestCypherQuerier_Query(t *testing.T) {
+func TestQuerier_Query(t *testing.T) {
 	s := dbtest.NewMemStore(t)
 	ctx := context.Background()
 
@@ -28,7 +27,7 @@ func TestCypherQuerier_Query(t *testing.T) {
 		t.Fatalf("AddNode: %v", err)
 	}
 
-	q := cypher.New(s.Connection())
+	q := s.Querier()
 	result, err := q.Query(ctx, "MATCH (n:Package) RETURN n.name")
 	if err != nil {
 		t.Fatalf("Query: %v", err)
@@ -41,7 +40,7 @@ func TestCypherQuerier_Query(t *testing.T) {
 	}
 }
 
-func TestCypherQuerier_QueryWithParams(t *testing.T) {
+func TestQuerier_QueryWithParams(t *testing.T) {
 	s := dbtest.NewMemStore(t)
 	ctx := context.Background()
 
@@ -58,7 +57,7 @@ func TestCypherQuerier_QueryWithParams(t *testing.T) {
 		t.Fatalf("AddNode: %v", err)
 	}
 
-	q := cypher.New(s.Connection())
+	q := s.Querier()
 	result, err := q.QueryWithParams(ctx,
 		"MATCH (n:Package) WHERE n.name = $pkg_name RETURN n.import_path",
 		map[string]any{"pkg_name": "paramspkg"},

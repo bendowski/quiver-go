@@ -49,11 +49,6 @@ func Open(path string) (*Store, error) {
 	return s, nil
 }
 
-// Connection returns the underlying LadyBug connection. This is intentionally
-// not part of the store.Store interface; callers that need raw Cypher access
-// (e.g. the CLI query command) retrieve it here and pass it to cypher.New.
-func (s *Store) Connection() *lbug.Connection { return s.conn }
-
 // exec runs a Cypher statement with no parameters and discards the result.
 func (s *Store) exec(stmt string) error {
 	r, err := s.conn.Query(stmt)
