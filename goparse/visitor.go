@@ -23,9 +23,9 @@ type visitor struct {
 
 // parseState accumulates nodes, edges, and metadata across files in a package.
 type parseState struct {
-	nodes    []model.Node
-	edges    []model.Edge
-	pkgNode  model.Node // the single Package node for this parse run
+	nodes   []model.Node
+	edges   []model.Edge
+	pkgNode model.Node // the single Package node for this parse run
 	// typesByName maps unqualified type name → node ID for HAS_RECEIVER / EMBEDS resolution.
 	typesByName map[string]string
 	// unresolvedReceivers holds (funcID, receiverTypeName) pairs for post-pass resolution.

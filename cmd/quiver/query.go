@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"text/tabwriter"
-	"os"
 
 	"github.com/spf13/cobra"
 
