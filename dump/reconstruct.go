@@ -48,18 +48,14 @@ func reconstructFile(ctx context.Context, s store.Store, fileNode model.Node) ([
 		if e.Kind != model.EdgeContains {
 			continue
 		}
-		var nodes []model.Node
-		for _, kind := range []model.NodeKind{
-			model.KindFunction, model.KindTypeDecl, model.KindVariable, model.KindImport,
-		} {
-			if e.TargetKind != kind {
-				continue
-			}
-			nodes, err = s.FindNodeByProperty(ctx, kind, "id", e.TargetID)
-			if err != nil {
-				continue
-			}
-			break
+		switch e.TargetKind {
+		case model.KindFunction, model.KindTypeDecl, model.KindVariable, model.KindImport:
+		default:
+			continue
+		}
+		nodes, err := s.FindNodeByProperty(ctx, e.TargetKind, "id", e.TargetID)
+		if err != nil {
+			return nil, fmt.Errorf("find %s %s: %w", e.TargetKind, e.TargetID, err)
 		}
 		for _, n := range nodes {
 			src, _ := n.Properties["source"].(string)

@@ -48,6 +48,11 @@ var loadCmd = &cobra.Command{
 
 		fmt.Printf("Loaded %d nodes (%d errors), %d edges (%d errors)\n",
 			len(res.Nodes), nodeErrs, len(res.Edges), edgeErrs)
+		if nodeErrs+edgeErrs > 0 {
+			// A data error, not a usage error: don't print CLI usage.
+			cmd.SilenceUsage = true
+			return fmt.Errorf("load completed with %d insert errors", nodeErrs+edgeErrs)
+		}
 		return nil
 	},
 }
