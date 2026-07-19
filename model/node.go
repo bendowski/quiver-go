@@ -13,7 +13,7 @@ const (
 	KindField    NodeKind = "Field"
 )
 
-// AllNodeKinds lists every NodeKind in dependency order (no forward refs).
+// AllNodeKinds lists every NodeKind.
 var AllNodeKinds = []NodeKind{
 	KindPackage,
 	KindFile,

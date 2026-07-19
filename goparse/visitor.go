@@ -23,9 +23,8 @@ type visitor struct {
 
 // parseState accumulates nodes, edges, and metadata across files in a package.
 type parseState struct {
-	nodes   []model.Node
-	edges   []model.Edge
-	pkgNode model.Node // the single Package node for this parse run
+	nodes []model.Node
+	edges []model.Edge
 	// typesByName maps unqualified type name → node ID for HAS_RECEIVER / EMBEDS resolution.
 	typesByName map[string]string
 	// unresolvedReceivers holds (funcID, receiverTypeName) pairs for post-pass resolution.
@@ -44,17 +43,16 @@ type unresolvedEmbed struct {
 	typeName   string
 }
 
-// Visit implements ast.Visitor.
-func (v *visitor) Visit(node ast.Node) ast.Visitor {
-	switch n := node.(type) {
+// visitDecl dispatches a single top-level declaration to the matching
+// handler. Top-level declarations are only ever *ast.FuncDecl or
+// *ast.GenDecl; anything else (*ast.BadDecl) is ignored.
+func (v *visitor) visitDecl(decl ast.Decl) {
+	switch d := decl.(type) {
 	case *ast.FuncDecl:
-		v.handleFuncDecl(n)
-		return nil // do not recurse into function body
+		v.handleFuncDecl(d)
 	case *ast.GenDecl:
-		v.handleGenDecl(n)
-		return nil
+		v.handleGenDecl(d)
 	}
-	return v
 }
 
 func (v *visitor) handleFuncDecl(fn *ast.FuncDecl) {
@@ -72,15 +70,15 @@ func (v *visitor) handleFuncDecl(fn *ast.FuncDecl) {
 		ID:   id,
 		Kind: model.KindFunction,
 		Properties: map[string]any{
-			"name":        fn.Name.Name,
-			"signature":   sig,
-			"receiver":    receiver,
-			"source":      v.sourceOf(fn),
-			"file_path":   v.filePath,
-			"start_line":  int64(pos.Line),
-			"end_line":    int64(end.Line),
-			"doc_comment": docText(fn.Doc),
-			"exported":    fn.Name.IsExported(),
+			model.PropName:       fn.Name.Name,
+			model.PropSignature:  sig,
+			model.PropReceiver:   receiver,
+			model.PropSource:     v.sourceOf(fn),
+			model.PropFilePath:   v.filePath,
+			model.PropStartLine:  int64(pos.Line),
+			model.PropEndLine:    int64(end.Line),
+			model.PropDocComment: docText(fn.Doc),
+			model.PropExported:   fn.Name.IsExported(),
 		},
 	}
 	v.state.nodes = append(v.state.nodes, node)
@@ -111,7 +109,7 @@ func (v *visitor) handleGenDecl(decl *ast.GenDecl) {
 			if !ok {
 				continue
 			}
-			v.handleImport(decl, is)
+			v.handleImport(is)
 		}
 	case token.TYPE:
 		for _, spec := range decl.Specs {
@@ -132,7 +130,7 @@ func (v *visitor) handleGenDecl(decl *ast.GenDecl) {
 	}
 }
 
-func (v *visitor) handleImport(decl *ast.GenDecl, spec *ast.ImportSpec) {
+func (v *visitor) handleImport(spec *ast.ImportSpec) {
 	id := uuid.NewString()
 	pos := v.fset.Position(spec.Pos())
 	end := v.fset.Position(spec.End())
@@ -147,11 +145,11 @@ func (v *visitor) handleImport(decl *ast.GenDecl, spec *ast.ImportSpec) {
 		ID:   id,
 		Kind: model.KindImport,
 		Properties: map[string]any{
-			"alias":      alias,
-			"path":       path,
-			"file_path":  v.filePath,
-			"start_line": int64(pos.Line),
-			"end_line":   int64(end.Line),
+			model.PropAlias:     alias,
+			model.PropPath:      path,
+			model.PropFilePath:  v.filePath,
+			model.PropStartLine: int64(pos.Line),
+			model.PropEndLine:   int64(end.Line),
 		},
 	}
 	v.state.nodes = append(v.state.nodes, node)
@@ -179,14 +177,14 @@ func (v *visitor) handleTypeSpec(decl *ast.GenDecl, spec *ast.TypeSpec) {
 		ID:   id,
 		Kind: model.KindTypeDecl,
 		Properties: map[string]any{
-			"name":        spec.Name.Name,
-			"kind":        kind,
-			"source":      v.sourceOf(spec),
-			"file_path":   v.filePath,
-			"start_line":  int64(pos.Line),
-			"end_line":    int64(end.Line),
-			"doc_comment": docText(decl.Doc),
-			"exported":    spec.Name.IsExported(),
+			model.PropName:       spec.Name.Name,
+			model.PropKind:       kind,
+			model.PropSource:     v.sourceOf(spec),
+			model.PropFilePath:   v.filePath,
+			model.PropStartLine:  int64(pos.Line),
+			model.PropEndLine:    int64(end.Line),
+			model.PropDocComment: docText(decl.Doc),
+			model.PropExported:   spec.Name.IsExported(),
 		},
 	}
 	v.state.nodes = append(v.state.nodes, node)
@@ -245,14 +243,14 @@ func (v *visitor) addField(typeDeclID, name, typeName, tag string, field *ast.Fi
 		ID:   id,
 		Kind: model.KindField,
 		Properties: map[string]any{
-			"name":       name,
-			"type_name":  typeName,
-			"tag":        tag,
-			"source":     v.sourceOf(field),
-			"file_path":  v.filePath,
-			"start_line": int64(pos.Line),
-			"end_line":   int64(end.Line),
-			"exported":   exported,
+			model.PropName:      name,
+			model.PropTypeName:  typeName,
+			model.PropTag:       tag,
+			model.PropSource:    v.sourceOf(field),
+			model.PropFilePath:  v.filePath,
+			model.PropStartLine: int64(pos.Line),
+			model.PropEndLine:   int64(end.Line),
+			model.PropExported:  exported,
 		},
 	}
 	v.state.nodes = append(v.state.nodes, node)
@@ -287,15 +285,15 @@ func (v *visitor) handleValueSpec(decl *ast.GenDecl, spec *ast.ValueSpec) {
 			ID:   id,
 			Kind: model.KindVariable,
 			Properties: map[string]any{
-				"name":        name.Name,
-				"kind":        kind,
-				"type_name":   typeName,
-				"source":      v.sourceOf(spec),
-				"file_path":   v.filePath,
-				"start_line":  int64(pos.Line),
-				"end_line":    int64(end.Line),
-				"doc_comment": docText(decl.Doc),
-				"exported":    name.IsExported(),
+				model.PropName:       name.Name,
+				model.PropKind:       kind,
+				model.PropTypeName:   typeName,
+				model.PropSource:     v.sourceOf(spec),
+				model.PropFilePath:   v.filePath,
+				model.PropStartLine:  int64(pos.Line),
+				model.PropEndLine:    int64(end.Line),
+				model.PropDocComment: docText(decl.Doc),
+				model.PropExported:   name.IsExported(),
 			},
 		}
 		v.state.nodes = append(v.state.nodes, node)
