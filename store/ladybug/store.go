@@ -12,6 +12,7 @@ import (
 	"github.com/bendowski/quiver/model"
 	"github.com/bendowski/quiver/query/cypher"
 	"github.com/bendowski/quiver/schema"
+	"github.com/bendowski/quiver/store"
 )
 
 // Store implements store.Store on top of a LadyBug database.
@@ -19,6 +20,8 @@ type Store struct {
 	db   *lbug.Database
 	conn *lbug.Connection
 }
+
+var _ store.Store = (*Store)(nil)
 
 // Open opens (or creates) a LadyBug database at path. When path is empty an
 // in-memory database is used. InitSchema is called automatically on the new
@@ -180,7 +183,7 @@ func collectNodes(qr *lbug.QueryResult, kind model.NodeKind) ([]model.Node, erro
 		}
 		// Copy properties; id lives in Properties as well.
 		props := maps.Clone(lbNode.Properties)
-		id, _ := props["id"].(string)
+		id, _ := props[model.PropID].(string)
 		nodes = append(nodes, model.Node{
 			ID:         id,
 			Kind:       kind,
@@ -222,7 +225,7 @@ func collectEdges(qr *lbug.QueryResult, srcID string, srcKind model.NodeKind) ([
 			return nil, fmt.Errorf("unexpected node type: %T", rawNode)
 		}
 
-		dstID, _ := dstNode.Properties["id"].(string)
+		dstID, _ := dstNode.Properties[model.PropID].(string)
 		relProps := maps.Clone(rel.Properties)
 
 		edges = append(edges, model.Edge{

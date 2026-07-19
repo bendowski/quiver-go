@@ -34,7 +34,7 @@ func (f *FakeStore) AddNode(_ context.Context, node model.Node) error {
 	if props == nil {
 		props = make(map[string]any, 1)
 	}
-	props["id"] = node.ID
+	props[model.PropID] = node.ID
 	node.Properties = props
 	f.nodes[node.ID] = node
 	return nil

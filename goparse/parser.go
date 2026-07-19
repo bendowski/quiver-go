@@ -83,14 +83,13 @@ func (p *Parser) ParseDir(_ context.Context, dir string) (*ParseResult, error) {
 		ID:   uuid.NewString(),
 		Kind: model.KindPackage,
 		Properties: map[string]any{
-			"name":        pkgName,
-			"import_path": dir,
-			"dir":         dir,
+			model.PropName:       pkgName,
+			model.PropImportPath: dir,
+			model.PropDir:        dir,
 		},
 	}
 
 	state := &parseState{
-		pkgNode:     pkgNode,
 		typesByName: make(map[string]string),
 	}
 	state.nodes = append(state.nodes, pkgNode)
@@ -114,10 +113,10 @@ func (p *Parser) ParseDir(_ context.Context, dir string) (*ParseResult, error) {
 			ID:   fileID,
 			Kind: model.KindFile,
 			Properties: map[string]any{
-				"name":         fi.Name(),
-				"file_path":    filePath,
-				"package_name": pkgName,
-				"source":       string(src),
+				model.PropName:        fi.Name(),
+				model.PropFilePath:    filePath,
+				model.PropPackageName: pkgName,
+				model.PropSource:      string(src),
 			},
 		}
 		state.nodes = append(state.nodes, fileNode)
@@ -139,7 +138,7 @@ func (p *Parser) ParseDir(_ context.Context, dir string) (*ParseResult, error) {
 			state:    state,
 		}
 		for _, decl := range astFile.Decls {
-			v.Visit(decl)
+			v.visitDecl(decl)
 		}
 	}
 
@@ -185,15 +184,14 @@ func (p *Parser) ParsePackages(ctx context.Context, patterns ...string) (*ParseR
 			ID:   uuid.NewString(),
 			Kind: model.KindPackage,
 			Properties: map[string]any{
-				"name":        pkg.Name,
-				"import_path": pkg.PkgPath,
-				"dir":         "",
+				model.PropName:       pkg.Name,
+				model.PropImportPath: pkg.PkgPath,
+				model.PropDir:        "",
 			},
 		}
 		combined.Nodes = append(combined.Nodes, pkgNode)
 
 		state := &parseState{
-			pkgNode:     pkgNode,
 			typesByName: make(map[string]string),
 		}
 
@@ -218,10 +216,10 @@ func (p *Parser) ParsePackages(ctx context.Context, patterns ...string) (*ParseR
 				ID:   fileID,
 				Kind: model.KindFile,
 				Properties: map[string]any{
-					"name":         filepath.Base(filePath),
-					"file_path":    filePath,
-					"package_name": pkg.Name,
-					"source":       string(src),
+					model.PropName:        filepath.Base(filePath),
+					model.PropFilePath:    filePath,
+					model.PropPackageName: pkg.Name,
+					model.PropSource:      string(src),
 				},
 			}
 			state.nodes = append(state.nodes, fileNode)
@@ -243,7 +241,7 @@ func (p *Parser) ParsePackages(ctx context.Context, patterns ...string) (*ParseR
 				state:    state,
 			}
 			for _, decl := range astFile.Decls {
-				v.Visit(decl)
+				v.visitDecl(decl)
 			}
 		}
 

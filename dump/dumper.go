@@ -44,7 +44,7 @@ func (d *Dumper) DumpAll(ctx context.Context, outDir string) error {
 // DumpPackage writes only files belonging to the package with the given import
 // path.
 func (d *Dumper) DumpPackage(ctx context.Context, pkgPath, outDir string) error {
-	pkgs, err := d.store.FindNodeByProperty(ctx, model.KindPackage, "import_path", pkgPath)
+	pkgs, err := d.store.FindNodeByProperty(ctx, model.KindPackage, model.PropImportPath, pkgPath)
 	if err != nil {
 		return fmt.Errorf("DumpPackage find pkg: %w", err)
 	}
@@ -61,7 +61,7 @@ func (d *Dumper) DumpPackage(ctx context.Context, pkgPath, outDir string) error 
 			if e.Kind != model.EdgeContains || e.TargetKind != model.KindFile {
 				continue
 			}
-			files, err := d.store.FindNodeByProperty(ctx, model.KindFile, "id", e.TargetID)
+			files, err := d.store.FindNodeByProperty(ctx, model.KindFile, model.PropID, e.TargetID)
 			if err != nil {
 				return fmt.Errorf("DumpPackage find file %s: %w", e.TargetID, err)
 			}
@@ -78,7 +78,7 @@ func (d *Dumper) DumpPackage(ctx context.Context, pkgPath, outDir string) error 
 
 // writeFile writes a single File node's source to outDir.
 func (d *Dumper) writeFile(ctx context.Context, fileNode model.Node, outDir string) error {
-	src, _ := fileNode.Properties["source"].(string)
+	src, _ := fileNode.Properties[model.PropSource].(string)
 	var content []byte
 
 	if src != "" {
@@ -88,13 +88,13 @@ func (d *Dumper) writeFile(ctx context.Context, fileNode model.Node, outDir stri
 		var err error
 		content, err = reconstructFile(ctx, d.store, fileNode)
 		if err != nil {
-			return fmt.Errorf("reconstruct %v: %w", fileNode.Properties["file_path"], err)
+			return fmt.Errorf("reconstruct %v: %w", fileNode.Properties[model.PropFilePath], err)
 		}
 	}
 
-	filePath, _ := fileNode.Properties["file_path"].(string)
+	filePath, _ := fileNode.Properties[model.PropFilePath].(string)
 	if filePath == "" {
-		name, _ := fileNode.Properties["name"].(string)
+		name, _ := fileNode.Properties[model.PropName].(string)
 		if name == "" {
 			name = fileNode.ID + ".go"
 		}

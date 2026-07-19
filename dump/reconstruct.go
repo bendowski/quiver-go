@@ -27,7 +27,7 @@ import (
 // enclosing import declaration, so files with imports reconstruct to invalid
 // Go and always take the unformatted fallback.
 func reconstructFile(ctx context.Context, s store.Store, fileNode model.Node) ([]byte, error) {
-	pkgName, _ := fileNode.Properties["package_name"].(string)
+	pkgName, _ := fileNode.Properties[model.PropPackageName].(string)
 	if pkgName == "" {
 		pkgName = "main"
 	}
@@ -54,13 +54,13 @@ func reconstructFile(ctx context.Context, s store.Store, fileNode model.Node) ([
 		default:
 			continue
 		}
-		nodes, err := s.FindNodeByProperty(ctx, e.TargetKind, "id", e.TargetID)
+		nodes, err := s.FindNodeByProperty(ctx, e.TargetKind, model.PropID, e.TargetID)
 		if err != nil {
 			return nil, fmt.Errorf("find %s %s: %w", e.TargetKind, e.TargetID, err)
 		}
 		for _, n := range nodes {
-			src, _ := n.Properties["source"].(string)
-			line, _ := n.Properties["start_line"].(int64)
+			src, _ := n.Properties[model.PropSource].(string)
+			line, _ := n.Properties[model.PropStartLine].(int64)
 			if src != "" {
 				snippets = append(snippets, snippet{line: line, source: src})
 			}
