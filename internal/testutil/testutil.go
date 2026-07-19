@@ -1,4 +1,6 @@
-// Package testutil provides shared helpers for quiver tests.
+// Package testutil provides shared, cgo-free helpers for quiver tests.
+// Helpers that need a real LadyBug database live in internal/dbtest, so
+// importing this package never pulls in the native library.
 package testutil
 
 import (
@@ -6,21 +8,7 @@ import (
 	"testing"
 
 	"github.com/spf13/afero"
-
-	lbstore "github.com/bendowski/quiver/store/ladybug"
 )
-
-// NewMemStore returns an in-memory LadyBug Store suitable for unit tests.
-// The test is failed immediately if the store cannot be opened.
-func NewMemStore(t *testing.T) *lbstore.Store {
-	t.Helper()
-	s, err := lbstore.Open("")
-	if err != nil {
-		t.Fatalf("testutil.NewMemStore: %v", err)
-	}
-	t.Cleanup(func() { _ = s.Close() })
-	return s
-}
 
 // NewMemFs returns a new in-memory Afero filesystem.
 func NewMemFs() afero.Fs {
