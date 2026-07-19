@@ -26,7 +26,7 @@ var AllNodeKinds = []NodeKind{
 
 // Node is a vertex in the source-code property graph.
 type Node struct {
-	ID         string           // UUID assigned client-side
+	ID         string // UUID assigned client-side
 	Kind       NodeKind
 	Properties map[string]any
 }
