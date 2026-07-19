@@ -4,11 +4,26 @@ package cypher
 
 import (
 	"fmt"
-	"sort"
+	"maps"
+	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/bendowski/quiver/model"
 )
+
+// propClauses stores each property in params under a prefix-namespaced key
+// and returns the matching "name: $prefix_name" clause fragments. Keys are
+// emitted in sorted order so generated statements are deterministic.
+func propClauses(prefix string, props map[string]any, params map[string]any) []string {
+	parts := make([]string, 0, len(props))
+	for _, k := range slices.Sorted(maps.Keys(props)) {
+		paramKey := prefix + k
+		params[paramKey] = props[k]
+		parts = append(parts, k+": $"+paramKey)
+	}
+	return parts
+}
 
 // BuildCreateNode returns a Cypher CREATE statement and its parameter map for
 // inserting a node of the given kind. The node id is passed separately and is
@@ -21,20 +36,7 @@ func BuildCreateNode(kind model.NodeKind, id string, props map[string]any) (stri
 
 	// id is always first.
 	params["p_id"] = id
-	parts := []string{"id: $p_id"}
-
-	// Sort keys for deterministic output.
-	keys := make([]string, 0, len(props))
-	for k := range props {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	for _, k := range keys {
-		paramKey := "p_" + k
-		params[paramKey] = props[k]
-		parts = append(parts, fmt.Sprintf("%s: $%s", k, paramKey))
-	}
+	parts := append([]string{"id: $p_id"}, propClauses("p_", props, params)...)
 
 	stmt := fmt.Sprintf("CREATE (n:%s {%s})", kind, strings.Join(parts, ", "))
 	return stmt, params
@@ -57,19 +59,7 @@ func BuildCreateEdge(
 
 	var relProps string
 	if len(props) > 0 {
-		keys := make([]string, 0, len(props))
-		for k := range props {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-
-		parts := make([]string, 0, len(props))
-		for _, k := range keys {
-			paramKey := "ep_" + k
-			params[paramKey] = props[k]
-			parts = append(parts, fmt.Sprintf("%s: $%s", k, paramKey))
-		}
-		relProps = " {" + strings.Join(parts, ", ") + "}"
+		relProps = " {" + strings.Join(propClauses("ep_", props, params), ", ") + "}"
 	}
 
 	stmt := fmt.Sprintf(
@@ -85,12 +75,21 @@ func BuildMatchByKind(kind model.NodeKind) string {
 	return fmt.Sprintf("MATCH (n:%s) RETURN n", kind)
 }
 
+// propNamePattern matches plain identifiers — the only shape a
+// schema-defined property name can have.
+var propNamePattern = regexp.MustCompile(`^[A-Za-z_]\w*$`)
+
 // BuildMatchByProperty returns a Cypher MATCH statement and its parameter map
 // to find nodes whose property prop equals val.
 //
-// NOTE: prop is interpolated directly into the query string and must be a
-// trusted, schema-defined property name.
+// prop is interpolated directly into the query string and must be a trusted,
+// schema-defined property name; BuildMatchByProperty panics if prop is not a
+// plain identifier, so a would-be injection fails loudly instead of reaching
+// the database.
 func BuildMatchByProperty(kind model.NodeKind, prop string, val any) (string, map[string]any) {
+	if !propNamePattern.MatchString(prop) {
+		panic(fmt.Sprintf("cypher: invalid property name %q", prop))
+	}
 	params := map[string]any{"p_val": val}
 	stmt := fmt.Sprintf("MATCH (n:%s) WHERE n.%s = $p_val RETURN n", kind, prop)
 	return stmt, params

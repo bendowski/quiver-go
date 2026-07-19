@@ -89,6 +89,15 @@ func TestBuildMatchByProperty(t *testing.T) {
 	}
 }
 
+func TestBuildMatchByProperty_invalidPropPanics(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("expected panic for non-identifier property name")
+		}
+	}()
+	cypher.BuildMatchByProperty(model.KindFunction, "name = '' OR 1=1 //", "x")
+}
+
 func TestBuildMatchEdgesFrom(t *testing.T) {
 	stmt, params := cypher.BuildMatchEdgesFrom(model.KindFile, "file-id")
 	if !strings.Contains(stmt, "MATCH (a:File {id: $p_id})-[r]->(b)") {

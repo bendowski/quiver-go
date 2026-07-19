@@ -4,7 +4,9 @@ package ladybug
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"maps"
 
 	lbug "github.com/LadybugDB/go-ladybug"
 	"github.com/bendowski/quiver/model"
@@ -175,17 +177,14 @@ func collectNodes(qr *lbug.QueryResult, kind model.NodeKind) ([]model.Node, erro
 		}
 		raw, ok := m["n"]
 		if !ok {
-			return nil, fmt.Errorf("column 'n' missing")
+			return nil, errors.New("column 'n' missing")
 		}
 		lbNode, ok := raw.(lbug.Node)
 		if !ok {
 			return nil, fmt.Errorf("unexpected node type: %T", raw)
 		}
 		// Copy properties; id lives in Properties as well.
-		props := make(map[string]any, len(lbNode.Properties))
-		for k, v := range lbNode.Properties {
-			props[k] = v
-		}
+		props := maps.Clone(lbNode.Properties)
 		id, _ := props["id"].(string)
 		nodes = append(nodes, model.Node{
 			ID:         id,
@@ -212,7 +211,7 @@ func collectEdges(qr *lbug.QueryResult, srcID string, srcKind model.NodeKind) ([
 
 		rawRel, ok := m["r"]
 		if !ok {
-			return nil, fmt.Errorf("column 'r' missing")
+			return nil, errors.New("column 'r' missing")
 		}
 		rel, ok := rawRel.(lbug.Relationship)
 		if !ok {
@@ -221,7 +220,7 @@ func collectEdges(qr *lbug.QueryResult, srcID string, srcKind model.NodeKind) ([
 
 		rawNode, ok := m["b"]
 		if !ok {
-			return nil, fmt.Errorf("column 'b' missing")
+			return nil, errors.New("column 'b' missing")
 		}
 		dstNode, ok := rawNode.(lbug.Node)
 		if !ok {
@@ -229,10 +228,7 @@ func collectEdges(qr *lbug.QueryResult, srcID string, srcKind model.NodeKind) ([
 		}
 
 		dstID, _ := dstNode.Properties["id"].(string)
-		relProps := make(map[string]any, len(rel.Properties))
-		for k, v := range rel.Properties {
-			relProps[k] = v
-		}
+		relProps := maps.Clone(rel.Properties)
 
 		edges = append(edges, model.Edge{
 			Kind:       model.EdgeKind(rel.Label),

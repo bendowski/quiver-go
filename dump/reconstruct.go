@@ -1,10 +1,11 @@
 package dump
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"go/format"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/bendowski/quiver/model"
@@ -66,22 +67,19 @@ func reconstructFile(ctx context.Context, s store.Store, fileNode model.Node) ([
 		}
 	}
 
-	sort.Slice(snippets, func(i, j int) bool {
-		return snippets[i].line < snippets[j].line
+	slices.SortFunc(snippets, func(a, b snippet) int {
+		return cmp.Compare(a.line, b.line)
 	})
 
-	var sb strings.Builder
-	sb.WriteString("package ")
-	sb.WriteString(pkgName)
-	sb.WriteString("\n\n")
-	for i, s := range snippets {
-		sb.WriteString(s.source)
-		if i < len(snippets)-1 {
-			sb.WriteString("\n\n")
-		}
+	// The file is the package clause plus each snippet, separated by blank
+	// lines.
+	parts := make([]string, 0, len(snippets)+1)
+	parts = append(parts, "package "+pkgName)
+	for _, sn := range snippets {
+		parts = append(parts, sn.source)
 	}
+	src := strings.Join(parts, "\n\n")
 
-	src := sb.String()
 	formatted, err := format.Source([]byte(src))
 	if err != nil {
 		// Return the unformatted version rather than failing.
