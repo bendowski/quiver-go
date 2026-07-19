@@ -166,9 +166,8 @@ build tags, or CGO flags (their tests use fakes such as the in-memory
 make test-pure
 ```
 
-CI (GitHub Actions) runs `make fmt-check`, `go vet`, and the pure suite on
-every push and pull request; the cgo-backed packages are covered by the
-tagged command above on a machine with the native library.
+`make fmt-check` verifies formatting; the cgo-backed packages are covered by
+the tagged command above on a machine with the native library.
 
 ### Debugging in VS Code
 
