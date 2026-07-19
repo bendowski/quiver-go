@@ -9,7 +9,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/bendowski/quiver/query/cypher"
 	lbstore "github.com/bendowski/quiver/store/ladybug"
 )
 
@@ -27,7 +26,7 @@ var queryCmd = &cobra.Command{
 		}
 		defer func() { _ = s.Close() }()
 
-		querier := cypher.New(s.Connection())
+		querier := s.Querier()
 		result, err := querier.Query(ctx, q)
 		if err != nil {
 			return fmt.Errorf("query: %w", err)

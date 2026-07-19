@@ -8,10 +8,15 @@ LADYBUG_LIB := $(CURDIR)/cmd/quiver/lib-ladybug
 export CGO_CFLAGS := -I$(LADYBUG_LIB)
 export CGO_LDFLAGS := -L$(LADYBUG_LIB)
 
-.PHONY: build clean
+.PHONY: build clean test-pure
 
 build:
 	go build -tags $(TAGS) -ldflags "-extldflags '-Wl,-rpath,$(LADYBUG_LIB)'" -o ./$(BINARY) ./cmd/quiver
+
+# Tests for every package that doesn't touch LadyBug; needs no native
+# library, build tags, or CGO flags.
+test-pure:
+	go test ./model/... ./schema/... ./goparse/... ./dump/... ./store ./query/... ./internal/testutil
 
 clean:
 	rm -f ./$(BINARY)

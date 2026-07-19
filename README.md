@@ -144,8 +144,8 @@ Quiver depends on [go-ladybug](https://github.com/LadybugDB/go-ladybug), which w
 - `model`: node/edge types and enums.
 - `schema`: LadyBug node/relationship table DDL.
 - `store`: storage interface.
-- `store/ladybug`: LadyBug-backed `store.Store` implementation.
-- `query/cypher`: Cypher query builder + query executor wrapper.
+- `store/ladybug`: LadyBug-backed `store.Store` implementation and raw-Cypher `query.Querier`; the only production package that touches cgo.
+- `query/cypher`: Cypher statement builders (pure; execution lives in `store/ladybug`).
 - `dump`: file export and fallback reconstruction logic.
 
 ## Development
@@ -158,12 +158,12 @@ CGO_LDFLAGS="-L$(pwd)/cmd/quiver/lib-ladybug -Wl,-rpath,$(pwd)/cmd/quiver/lib-la
 go test -tags system_ladybug ./...
 ```
 
-Packages that don't touch LadyBug can be tested without the native library
-(their tests use the in-memory `testutil.FakeStore` instead of a real
-database):
+Packages that don't touch LadyBug can be tested without the native library,
+build tags, or CGO flags (their tests use fakes such as the in-memory
+`testutil.FakeStore` instead of a real database):
 
 ```bash
-go test ./goparse ./dump
+make test-pure
 ```
 
 ### Debugging in VS Code
