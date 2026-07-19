@@ -152,6 +152,32 @@ func TestParseDir_functionProperties(t *testing.T) {
 	}
 }
 
+func TestParseDir_mixedPackageNames(t *testing.T) {
+	fs := testutil.NewMemFs()
+	testutil.WriteGoFile(t, fs, "/pkg/a.go", "package x\n\nfunc A() {}\n")
+	testutil.WriteGoFile(t, fs, "/pkg/b.go", "package x_test\n\nfunc B() {}\n")
+
+	p := goparse.New(fs)
+	res, err := p.ParseDir(context.Background(), "/pkg")
+	if err != nil {
+		t.Fatalf("ParseDir: %v", err)
+	}
+
+	got := make(map[string]string) // file name → package_name
+	for _, n := range res.Nodes {
+		if n.Kind == model.KindFile {
+			name, _ := n.Properties[model.PropName].(string)
+			pkg, _ := n.Properties[model.PropPackageName].(string)
+			got[name] = pkg
+		}
+	}
+	for name, want := range map[string]string{"a.go": "x", "b.go": "x_test"} {
+		if got[name] != want {
+			t.Errorf("%s: package_name want %q, got %q", name, want, got[name])
+		}
+	}
+}
+
 func TestParseDir_emptyDir(t *testing.T) {
 	fs := testutil.NewMemFs()
 	_ = fs.MkdirAll("/empty", 0o755)

@@ -2,6 +2,9 @@ package dump_test
 
 import (
 	"context"
+	"go/parser"
+	"go/token"
+	"strings"
 	"testing"
 
 	"github.com/bendowski/quiver/dump"
@@ -121,10 +124,111 @@ func TestDumpAll_reconstructFallback(t *testing.T) {
 		t.Fatalf("AddEdge: %v", err)
 	}
 
+	// A contained function gives the reconstruction real content. (Imports
+	// are deliberately absent: reconstructed import blocks are issue #3.)
+	fnID := uuid.NewString()
+	if err := s.AddNode(ctx, model.Node{
+		ID:   fnID,
+		Kind: model.KindFunction,
+		Properties: map[string]any{
+			model.PropName:      "Hello",
+			model.PropSource:    "func Hello() string {\n\treturn \"hi\"\n}",
+			model.PropStartLine: int64(3),
+		},
+	}); err != nil {
+		t.Fatalf("AddNode fn: %v", err)
+	}
+	if err := s.AddEdge(ctx, model.Edge{
+		Kind:       model.EdgeContains,
+		SourceID:   fileID,
+		SourceKind: model.KindFile,
+		TargetID:   fnID,
+		TargetKind: model.KindFunction,
+	}); err != nil {
+		t.Fatalf("AddEdge fn: %v", err)
+	}
+
 	outfs := testutil.NewMemFs()
 	d := dump.New(s, outfs)
-	// Should not error even with empty source – it falls back to reconstruct.
 	if err := d.DumpAll(ctx, "/out"); err != nil {
 		t.Fatalf("DumpAll with fallback: %v", err)
+	}
+
+	got, err := afero.ReadFile(outfs, "/out/fb.go")
+	if err != nil {
+		t.Fatalf("ReadFile reconstructed output: %v", err)
+	}
+	if _, err := parser.ParseFile(token.NewFileSet(), "fb.go", got, 0); err != nil {
+		t.Errorf("reconstructed output is not valid Go: %v\n%s", err, got)
+	}
+	if !strings.Contains(string(got), "func Hello()") {
+		t.Errorf("reconstructed output missing function:\n%s", got)
+	}
+}
+
+// seedPackageWithFile inserts a Package containing one File with source.
+func seedPackageWithFile(t *testing.T, s *testutil.FakeStore, importPath, fileName, source string) {
+	t.Helper()
+	ctx := context.Background()
+	pkgID := uuid.NewString()
+	fileID := uuid.NewString()
+	if err := s.AddNode(ctx, model.Node{
+		ID:   pkgID,
+		Kind: model.KindPackage,
+		Properties: map[string]any{
+			model.PropName:       importPath,
+			model.PropImportPath: importPath,
+			model.PropDir:        "/",
+		},
+	}); err != nil {
+		t.Fatalf("AddNode pkg: %v", err)
+	}
+	if err := s.AddNode(ctx, model.Node{
+		ID:   fileID,
+		Kind: model.KindFile,
+		Properties: map[string]any{
+			model.PropName:        fileName,
+			model.PropFilePath:    "/" + fileName,
+			model.PropPackageName: importPath,
+			model.PropSource:      source,
+		},
+	}); err != nil {
+		t.Fatalf("AddNode file: %v", err)
+	}
+	if err := s.AddEdge(ctx, model.Edge{
+		Kind:       model.EdgeContains,
+		SourceID:   pkgID,
+		SourceKind: model.KindPackage,
+		TargetID:   fileID,
+		TargetKind: model.KindFile,
+	}); err != nil {
+		t.Fatalf("AddEdge: %v", err)
+	}
+}
+
+func TestDumpPackage(t *testing.T) {
+	s := testutil.NewFakeStore()
+	seedPackageWithFile(t, s, "example.com/one", "one.go", "package one\n")
+	seedPackageWithFile(t, s, "example.com/two", "two.go", "package two\n")
+
+	outfs := testutil.NewMemFs()
+	d := dump.New(s, outfs)
+	if err := d.DumpPackage(context.Background(), "example.com/one", "/out"); err != nil {
+		t.Fatalf("DumpPackage: %v", err)
+	}
+
+	if ok, _ := afero.Exists(outfs, "/out/one.go"); !ok {
+		t.Error("expected /out/one.go to be written")
+	}
+	if ok, _ := afero.Exists(outfs, "/out/two.go"); ok {
+		t.Error("two.go belongs to another package and must not be written")
+	}
+}
+
+func TestDumpPackage_unknownPackage(t *testing.T) {
+	s := testutil.NewFakeStore()
+	d := dump.New(s, testutil.NewMemFs())
+	if err := d.DumpPackage(context.Background(), "example.com/missing", "/out"); err == nil {
+		t.Fatal("expected an error for an unknown package import path")
 	}
 }

@@ -166,6 +166,10 @@ build tags, or CGO flags (their tests use fakes such as the in-memory
 make test-pure
 ```
 
+CI (GitHub Actions) runs `make fmt-check`, `go vet`, and the pure suite on
+every push and pull request; the cgo-backed packages are covered by the
+tagged command above on a machine with the native library.
+
 ### Debugging in VS Code
 
 `.vscode/launch.json` has debug configurations for `load`, `query`, and `dump` (Go extension required). Each sets the `system_ladybug` build tag and the `CGO_CFLAGS`/`CGO_LDFLAGS` env vars needed to find `cmd/quiver/lib-ladybug/`. Pick a configuration, adjust its `args`, and press F5.
