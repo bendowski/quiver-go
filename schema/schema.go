@@ -2,7 +2,10 @@
 // provides InitSchema to execute those statements against a live connection.
 package schema
 
-import "strings"
+import (
+	"slices"
+	"strings"
+)
 
 // nodeTableDDL lists CREATE NODE TABLE statements in dependency order.
 var nodeTableDDL = []string{
@@ -27,12 +30,14 @@ var relTableDDL = []string{
 	`CREATE REL TABLE RESOLVES_TO(FROM Import TO Package)`,
 }
 
+// ExecFunc executes a single DDL statement against a database connection.
+type ExecFunc func(stmt string) error
+
 // InitSchema executes all DDL statements via execFn. Errors indicating that a
 // table already exists are silently ignored, so InitSchema is safe to call
 // against an already-initialised database.
-func InitSchema(execFn func(string) error) error {
-	all := append(append([]string{}, nodeTableDDL...), relTableDDL...)
-	for _, stmt := range all {
+func InitSchema(execFn ExecFunc) error {
+	for _, stmt := range slices.Concat(nodeTableDDL, relTableDDL) {
 		if err := execFn(stmt); err != nil {
 			if isAlreadyExistsError(err) {
 				continue
@@ -45,10 +50,10 @@ func InitSchema(execFn func(string) error) error {
 
 // isAlreadyExistsError returns true when err is a LadyBug "already exists in
 // catalog" error, which means the table was created in a previous session.
+//
+// go-ladybug exposes no typed errors, so matching the message text is the
+// only option; the substring is pinned to upstream's wording and must be
+// re-checked when bumping the go-ladybug version.
 func isAlreadyExistsError(err error) bool {
-	if err == nil {
-		return false
-	}
-	msg := err.Error()
-	return strings.Contains(msg, "already exists in catalog")
+	return err != nil && strings.Contains(err.Error(), "already exists in catalog")
 }
