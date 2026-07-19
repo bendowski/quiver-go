@@ -29,7 +29,7 @@ Important behavior:
 
 - `ParseDir` scans `.go` files **non-recursively** in `<dir>`.
 - Files that fail to parse are skipped.
-- Node and edge insert errors are counted and reported; command continues loading remaining items.
+- Node and edge insert errors are counted and reported; command continues loading remaining items and exits non-zero if any insert failed.
 
 ### `query`
 

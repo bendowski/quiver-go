@@ -62,8 +62,11 @@ func (d *Dumper) DumpPackage(ctx context.Context, pkgPath, outDir string) error 
 				continue
 			}
 			files, err := d.store.FindNodeByProperty(ctx, model.KindFile, "id", e.TargetID)
-			if err != nil || len(files) == 0 {
-				continue
+			if err != nil {
+				return fmt.Errorf("DumpPackage find file %s: %w", e.TargetID, err)
+			}
+			if len(files) == 0 {
+				continue // dangling CONTAINS edge; nothing to write
 			}
 			if err := d.writeFile(ctx, files[0], outDir); err != nil {
 				return err

@@ -7,6 +7,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -21,6 +22,12 @@ import (
 type ParseResult struct {
 	Nodes []model.Node
 	Edges []model.Edge
+
+	// LoadErrors holds non-fatal per-package errors reported by
+	// packages.Load during ParsePackages (parse or type-check problems).
+	// The graph still contains whatever was parseable. Always nil for
+	// ParseDir.
+	LoadErrors []error
 }
 
 // Parser parses Go source trees into property graph elements.
@@ -169,11 +176,9 @@ func (p *Parser) ParsePackages(ctx context.Context, patterns ...string) (*ParseR
 	seen := make(map[string]bool) // seen file paths
 
 	for _, pkg := range pkgs {
-		if len(pkg.Errors) > 0 {
-			// Report but don't abort on per-package errors.
-			for _, e := range pkg.Errors {
-				_ = e // non-fatal
-			}
+		// Collect non-fatal per-package errors; see ParseResult.LoadErrors.
+		for _, e := range pkg.Errors {
+			combined.LoadErrors = append(combined.LoadErrors, e)
 		}
 
 		pkgNode := model.Node{
@@ -203,7 +208,10 @@ func (p *Parser) ParsePackages(ctx context.Context, patterns ...string) (*ParseR
 			seen[filePath] = true
 
 			fset := cfg.Fset
-			src := readFileBytes(filePath)
+			src, err := os.ReadFile(filePath)
+			if err != nil {
+				return nil, fmt.Errorf("read %s: %w", filePath, err)
+			}
 
 			fileID := uuid.NewString()
 			fileNode := model.Node{
@@ -245,11 +253,4 @@ func (p *Parser) ParsePackages(ctx context.Context, patterns ...string) (*ParseR
 	}
 
 	return combined, nil
-}
-
-// readFileBytes reads a file from the real OS filesystem.
-func readFileBytes(path string) []byte {
-	osfs := afero.NewOsFs()
-	b, _ := afero.ReadFile(osfs, path)
-	return b
 }
