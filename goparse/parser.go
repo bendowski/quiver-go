@@ -4,9 +4,9 @@ package goparse
 import (
 	"context"
 	"fmt"
+	"go/ast"
 	"go/parser"
 	"go/token"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -54,36 +54,42 @@ func (p *Parser) ParseDir(_ context.Context, dir string) (*ParseResult, error) {
 		return nil, fmt.Errorf("ParseDir ReadDir %s: %w", dir, err)
 	}
 
-	// Collect Go source files.
-	var goFiles []fs.FileInfo
+	// Read and parse every .go file once; files with syntax errors are
+	// skipped.
+	type parsedFile struct {
+		name string
+		path string
+		src  []byte
+		ast  *ast.File
+	}
+	var files []parsedFile
 	for _, e := range entries {
-		if !e.IsDir() && strings.HasSuffix(e.Name(), ".go") {
-			goFiles = append(goFiles, e)
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".go") {
+			continue
 		}
-	}
-	if len(goFiles) == 0 {
-		return &ParseResult{}, nil
-	}
-
-	// Determine the package name from the first parseable file.
-	var pkgName string
-	for _, fi := range goFiles {
-		src, err := afero.ReadFile(p.fs, filepath.Join(dir, fi.Name()))
+		filePath := filepath.Join(dir, e.Name())
+		src, err := afero.ReadFile(p.fs, filePath)
+		if err != nil {
+			return nil, fmt.Errorf("read %s: %w", filePath, err)
+		}
+		astFile, err := parser.ParseFile(fset, filePath, src, parser.ParseComments)
 		if err != nil {
 			continue
 		}
-		f, err := parser.ParseFile(fset, fi.Name(), src, 0)
-		if err == nil && f.Name != nil {
-			pkgName = f.Name.Name
-			break
-		}
+		files = append(files, parsedFile{name: e.Name(), path: filePath, src: src, ast: astFile})
+	}
+	if len(files) == 0 {
+		return &ParseResult{}, nil
 	}
 
+	// The Package node takes its name from the first parsed file; each File
+	// node records its own package clause, since a directory can mix
+	// package x and x_test files.
 	pkgNode := model.Node{
 		ID:   uuid.NewString(),
 		Kind: model.KindPackage,
 		Properties: map[string]any{
-			model.PropName:       pkgName,
+			model.PropName:       files[0].ast.Name.Name,
 			model.PropImportPath: dir,
 			model.PropDir:        dir,
 		},
@@ -94,29 +100,16 @@ func (p *Parser) ParseDir(_ context.Context, dir string) (*ParseResult, error) {
 	}
 	state.nodes = append(state.nodes, pkgNode)
 
-	// Parse each file.
-	for _, fi := range goFiles {
-		filePath := filepath.Join(dir, fi.Name())
-		src, err := afero.ReadFile(p.fs, filePath)
-		if err != nil {
-			return nil, fmt.Errorf("read %s: %w", filePath, err)
-		}
-
-		astFile, err := parser.ParseFile(fset, filePath, src, parser.ParseComments)
-		if err != nil {
-			// Skip files that fail to parse (syntax errors).
-			continue
-		}
-
+	for _, f := range files {
 		fileID := uuid.NewString()
 		fileNode := model.Node{
 			ID:   fileID,
 			Kind: model.KindFile,
 			Properties: map[string]any{
-				model.PropName:        fi.Name(),
-				model.PropFilePath:    filePath,
-				model.PropPackageName: pkgName,
-				model.PropSource:      string(src),
+				model.PropName:        f.name,
+				model.PropFilePath:    f.path,
+				model.PropPackageName: f.ast.Name.Name,
+				model.PropSource:      string(f.src),
 			},
 		}
 		state.nodes = append(state.nodes, fileNode)
@@ -132,12 +125,12 @@ func (p *Parser) ParseDir(_ context.Context, dir string) (*ParseResult, error) {
 
 		v := &visitor{
 			fset:     fset,
-			src:      src,
+			src:      f.src,
 			fileID:   fileID,
-			filePath: filePath,
+			filePath: f.path,
 			state:    state,
 		}
-		for _, decl := range astFile.Decls {
+		for _, decl := range f.ast.Decls {
 			v.visitDecl(decl)
 		}
 	}
@@ -195,11 +188,18 @@ func (p *Parser) ParsePackages(ctx context.Context, patterns ...string) (*ParseR
 			typesByName: make(map[string]string),
 		}
 
-		for i, astFile := range pkg.Syntax {
-			var filePath string
-			if i < len(pkg.GoFiles) {
-				filePath = pkg.GoFiles[i]
+		for _, astFile := range pkg.Syntax {
+			// Derive each file's path from the FileSet rather than pairing
+			// pkg.Syntax with pkg.GoFiles by index — Syntax parallels
+			// CompiledGoFiles, and the two lists diverge for generated or
+			// cgo-processed files.
+			tf := cfg.Fset.File(astFile.Pos())
+			if tf == nil {
+				combined.LoadErrors = append(combined.LoadErrors,
+					fmt.Errorf("no file position for a syntax tree in %s", pkg.PkgPath))
+				continue
 			}
+			filePath := tf.Name()
 			if seen[filePath] {
 				continue
 			}

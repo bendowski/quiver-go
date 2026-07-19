@@ -183,7 +183,7 @@ func (v *visitor) handleTypeSpec(decl *ast.GenDecl, spec *ast.TypeSpec) {
 			model.PropFilePath:   v.filePath,
 			model.PropStartLine:  int64(pos.Line),
 			model.PropEndLine:    int64(end.Line),
-			model.PropDocComment: docText(decl.Doc),
+			model.PropDocComment: docText(docOf(spec.Doc, decl.Doc)),
 			model.PropExported:   spec.Name.IsExported(),
 		},
 	}
@@ -238,7 +238,7 @@ func (v *visitor) addField(typeDeclID, name, typeName, tag string, field *ast.Fi
 	pos := v.fset.Position(field.Pos())
 	end := v.fset.Position(field.End())
 
-	exported := len(name) > 0 && name[0] >= 'A' && name[0] <= 'Z'
+	exported := token.IsExported(name)
 	node := model.Node{
 		ID:   id,
 		Kind: model.KindField,
@@ -292,7 +292,7 @@ func (v *visitor) handleValueSpec(decl *ast.GenDecl, spec *ast.ValueSpec) {
 				model.PropFilePath:   v.filePath,
 				model.PropStartLine:  int64(pos.Line),
 				model.PropEndLine:    int64(end.Line),
-				model.PropDocComment: docText(decl.Doc),
+				model.PropDocComment: docText(docOf(spec.Doc, decl.Doc)),
 				model.PropExported:   name.IsExported(),
 			},
 		}
@@ -364,13 +364,17 @@ func extractReceiverTypeName(recv *ast.FieldList) string {
 }
 
 // baseTypeName extracts the identifier from a type expression, stripping
-// pointer and generic index wrappers.
+// pointer, generic-index, and package-qualifier wrappers. For a qualified
+// type like sync.Mutex it returns the bare name (Mutex), matching Go's
+// naming rule for embedded fields.
 func baseTypeName(expr ast.Expr) string {
 	switch t := expr.(type) {
 	case *ast.StarExpr:
 		return baseTypeName(t.X)
 	case *ast.Ident:
 		return t.Name
+	case *ast.SelectorExpr:
+		return t.Sel.Name
 	case *ast.IndexExpr:
 		return baseTypeName(t.X)
 	case *ast.IndexListExpr:
@@ -431,4 +435,14 @@ func docText(cg *ast.CommentGroup) string {
 		return ""
 	}
 	return strings.TrimSpace(cg.Text())
+}
+
+// docOf returns spec's own doc comment when present, falling back to the
+// enclosing declaration's. In grouped declarations (type (...), var (...))
+// each spec carries its own doc.
+func docOf(specDoc, declDoc *ast.CommentGroup) *ast.CommentGroup {
+	if specDoc != nil {
+		return specDoc
+	}
+	return declDoc
 }
