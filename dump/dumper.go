@@ -24,8 +24,10 @@ func New(s store.Store, fs afero.Fs) *Dumper {
 	return &Dumper{store: s, fs: fs}
 }
 
-// DumpAll writes every File stored in the graph to outDir, preserving the
-// relative path from each file's file_path property.
+// DumpAll writes every File stored in the graph to outDir. Output is
+// flattened: each file is written directly to outDir under the basename of
+// its file_path property, so files with the same basename overwrite each
+// other.
 func (d *Dumper) DumpAll(ctx context.Context, outDir string) error {
 	files, err := d.store.GetNodesByKind(ctx, model.KindFile)
 	if err != nil {
@@ -96,6 +98,8 @@ func (d *Dumper) writeFile(ctx context.Context, fileNode model.Node, outDir stri
 		filePath = name
 	}
 
+	// TODO(#2): preserve the directory structure from file_path instead of
+	// flattening; files with the same basename currently overwrite each other.
 	outPath := filepath.Join(outDir, filepath.Base(filePath))
 	if err := d.fs.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
 		return fmt.Errorf("MkdirAll: %w", err)

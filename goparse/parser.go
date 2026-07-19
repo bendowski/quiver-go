@@ -98,7 +98,7 @@ func (p *Parser) ParseDir(_ context.Context, dir string) (*ParseResult, error) {
 
 		astFile, err := parser.ParseFile(fset, filePath, src, parser.ParseComments)
 		if err != nil {
-			// Skip files with parse errors (e.g. test-only build tags).
+			// Skip files that fail to parse (syntax errors).
 			continue
 		}
 
@@ -142,8 +142,10 @@ func (p *Parser) ParseDir(_ context.Context, dir string) (*ParseResult, error) {
 }
 
 // ParsePackages uses golang.org/x/tools/go/packages to load and type-check
-// the given patterns. In addition to structural nodes it resolves CALLS,
-// IMPLEMENTS, and REFERS_TO edges that require type information.
+// the given patterns. It currently produces the same structural nodes and
+// edges as ParseDir; the loaded type information is not used yet.
+//
+// TODO(#1): use type info to resolve CALLS, IMPLEMENTS, and REFERS_TO edges.
 //
 // Unlike ParseDir this requires a real filesystem and proper module setup.
 func (p *Parser) ParsePackages(ctx context.Context, patterns ...string) (*ParseResult, error) {

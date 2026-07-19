@@ -19,7 +19,12 @@ import (
 //  1. Fetch the File node to get package_name.
 //  2. Fetch all nodes contained in the file (via CONTAINS edges from the file).
 //  3. Sort them by start_line, then emit their "source" property strings.
-//  4. Validate the result with go/format.Source.
+//  4. Format the result with go/format.Source, falling back to the
+//     unformatted text when formatting fails.
+//
+// TODO(#3): Import snippets are stored as bare specs (`"fmt"`) without an
+// enclosing import declaration, so files with imports reconstruct to invalid
+// Go and always take the unformatted fallback.
 func reconstructFile(ctx context.Context, s store.Store, fileNode model.Node) ([]byte, error) {
 	pkgName, _ := fileNode.Properties["package_name"].(string)
 	if pkgName == "" {
