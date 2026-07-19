@@ -1,0 +1,44 @@
+[
+  {
+    "label": "quiver: load",
+    "adapter": "Delve",
+    "request": "launch",
+    "mode": "debug",
+    "program": "./cmd/quiver",
+    "buildFlags": ["-tags", "system_ladybug"],
+    "args": ["--db", "/tmp/qdb", "load", "./goparse"],
+    "cwd": "${ZED_WORKTREE_ROOT}",
+    "env": {
+      "CGO_CFLAGS": "-I${ZED_WORKTREE_ROOT}/cmd/quiver/lib-ladybug",
+      "CGO_LDFLAGS": "-L${ZED_WORKTREE_ROOT}/cmd/quiver/lib-ladybug -Wl,-rpath,${ZED_WORKTREE_ROOT}/cmd/quiver/lib-ladybug"
+    }
+  },
+  {
+    "label": "quiver: query",
+    "adapter": "Delve",
+    "request": "launch",
+    "mode": "debug",
+    "program": "./cmd/quiver",
+    "buildFlags": ["-tags", "system_ladybug"],
+    "args": ["--db", "/tmp/qdb", "query", "MATCH (f:Function) RETURN f.name, f.exported"],
+    "cwd": "${ZED_WORKTREE_ROOT}",
+    "env": {
+      "CGO_CFLAGS": "-I${ZED_WORKTREE_ROOT}/cmd/quiver/lib-ladybug",
+      "CGO_LDFLAGS": "-L${ZED_WORKTREE_ROOT}/cmd/quiver/lib-ladybug -Wl,-rpath,${ZED_WORKTREE_ROOT}/cmd/quiver/lib-ladybug"
+    }
+  },
+  {
+    "label": "quiver: dump",
+    "adapter": "Delve",
+    "request": "launch",
+    "mode": "debug",
+    "program": "./cmd/quiver",
+    "buildFlags": ["-tags", "system_ladybug"],
+    "args": ["--db", "/tmp/qdb", "dump", "/tmp/out"],
+    "cwd": "${ZED_WORKTREE_ROOT}",
+    "env": {
+      "CGO_CFLAGS": "-I${ZED_WORKTREE_ROOT}/cmd/quiver/lib-ladybug",
+      "CGO_LDFLAGS": "-L${ZED_WORKTREE_ROOT}/cmd/quiver/lib-ladybug -Wl,-rpath,${ZED_WORKTREE_ROOT}/cmd/quiver/lib-ladybug"
+    }
+  }
+]
